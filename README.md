@@ -1,0 +1,1 @@
+# spring-boot-test-oauth2-resource-server
