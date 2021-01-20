@@ -7,7 +7,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.web.servlet.invoke
 
 @EnableWebSecurity
-class Configuration : WebSecurityConfigurerAdapter() {
+class SecurityConfiguration : WebSecurityConfigurerAdapter() {
 
     override fun configure(http: HttpSecurity) {
         http {
