@@ -1,10 +1,10 @@
 package com.example.demo
 
 import com.github.tomakehurst.wiremock.client.WireMock
+import org.assertj.core.api.Assertions.assertThat
 import org.jose4j.jwk.JsonWebKeySet
 import org.jose4j.jwk.RsaJwkGenerator
 import org.jose4j.jws.AlgorithmIdentifiers
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -64,13 +64,12 @@ class CustomerControllerTests {
     fun `should be unauthorized without bearer token`(@Autowired restTemplate: TestRestTemplate) {
         val response = restTemplate.getForEntity<List<Customer>>("/customers")
 
-        assertEquals(HttpStatus.UNAUTHORIZED, response.statusCode)
+        assertThat(response.statusCode).isEqualTo(HttpStatus.UNAUTHORIZED)
     }
 
     @Test
     fun `should be able to fetch customers with valid bearer token`(@Autowired restTemplate: TestRestTemplate) {
         val token = jwsBuilder.build().compactSerialization
-
         val request = RequestEntity
             .get("/customers")
             .headers { it.setBearerAuth(token) }
@@ -82,6 +81,8 @@ class CustomerControllerTests {
             method = HttpMethod.GET
         ).body
 
-        assertEquals("always right", requireNotNull(customers)[0].name)
+        assertThat(customers)
+            .isNotNull
+            .containsExactly(Customer("always right"))
     }
 }
