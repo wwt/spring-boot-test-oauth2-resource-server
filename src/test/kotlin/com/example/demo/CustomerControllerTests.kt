@@ -1,10 +1,10 @@
 package com.example.demo
 
 import com.github.tomakehurst.wiremock.client.WireMock
+import org.assertj.core.api.Assertions.assertThat
 import org.jose4j.jwk.JsonWebKeySet
 import org.jose4j.jwk.RsaJwkGenerator
 import org.jose4j.jws.AlgorithmIdentifiers
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -12,15 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.client.TestRestTemplate
+import org.springframework.boot.test.web.client.exchange
+import org.springframework.boot.test.web.client.getForEntity
 import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock
-import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.RequestEntity
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.util.CollectionUtils.toMultiValueMap
-import java.net.URI
-import java.util.UUID
+import java.util.*
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWireMock(port = 0)
@@ -42,8 +41,6 @@ class CustomerControllerTests {
 
             jwsBuilder.rsaJsonWebKey(rsaJsonWebKey)
         }
-
-        inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object : ParameterizedTypeReference<T>() {}
     }
 
     @Value("\${wiremock.server.baseUrl}")
@@ -64,23 +61,28 @@ class CustomerControllerTests {
     }
 
     @Test
-    fun getCustomersUnauthorized(@Autowired restTemplate: TestRestTemplate) {
-        val response = restTemplate.exchange("/customers", HttpMethod.GET, null, List::class.java)
+    fun `should be unauthorized without bearer token`(@Autowired restTemplate: TestRestTemplate) {
+        val response = restTemplate.getForEntity<List<Customer>>("/customers")
 
-        assertEquals(HttpStatus.UNAUTHORIZED, response.statusCode)
+        assertThat(response.statusCode).isEqualTo(HttpStatus.UNAUTHORIZED)
     }
 
     @Test
-    fun postAndGetCustomers(@Autowired restTemplate: TestRestTemplate) {
-        val headers = jwsBuilder.build().let {
-            toMultiValueMap(mapOf("Authorization" to listOf(String.format("Bearer %s", it.compactSerialization))))
-        }
+    fun `should be able to fetch customers with valid bearer token`(@Autowired restTemplate: TestRestTemplate) {
+        val token = jwsBuilder.build().compactSerialization
+        val request = RequestEntity
+            .get("/customers")
+            .headers { it.setBearerAuth(token) }
+            .build()
 
-        val request = RequestEntity<Any>(headers, HttpMethod.GET, URI.create("/customers"))
-        val customers = restTemplate.exchange(request, typeRef<List<Customer>>()).let {
-            it.body!!
-        }
+        val customers = restTemplate.exchange<List<Customer>>(
+            url = "/customers",
+            requestEntity = request,
+            method = HttpMethod.GET
+        ).body
 
-        assertEquals("always right", customers[0].name)
+        assertThat(customers)
+            .isNotNull
+            .containsExactly(Customer("always right"))
     }
 }
