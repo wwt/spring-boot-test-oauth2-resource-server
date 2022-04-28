@@ -13,7 +13,7 @@ data class JWSBuilder(
 
     fun rsaJsonWebKey(rsaJsonWebKey: RsaJsonWebKey) = apply { this.rsaJsonWebKey = rsaJsonWebKey }
     fun issuer(issuer: String) = apply { this.claimsIssuer = issuer }
-    fun subject(subject: String) = apply { this.claimsIssuer = subject }
+    fun subject(subject: String) = apply { this.claimsSubject = subject }
 
     fun build(): JsonWebSignature {
         // The JWT Claims Set represents a JSON object whose members are the claims conveyed by the JWT.
